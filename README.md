@@ -1,12 +1,20 @@
 # spark-dating-web
 
-Public dating web app for App Two.
+Public tap-through demo of Spark. The page is a phone frame with Discover, Map, Matches, Spark+, and Profile. Sample people are built into the page, so the demo still runs when the network call fails. When the call succeeds, the deck and map use live demo data.
 
-This repository is the public GitHub home for the web product. It starts minimal; application code lands via pull requests.
+## Live site
 
-## Status
+https://monmonmars.github.io/spark-dating-web/
 
-Scaffold / docs seed. See companion public repo [MonMonMars/app-two](https://github.com/MonMonMars/app-two) for the in-progress web MVP (PR #1).
+GitHub Pages serves this repository as a static site. `index.html` is the site root.
+
+## API
+
+Deck, map people, and demo events come from the Spark Supabase project:
+
+`https://zvcxbrdhikeizyaumtsg.supabase.co/functions/v1/demo-data`
+
+The page GETs that function to load the deck, people, and chats, and POSTs demo events to the same function. A failed request leaves the built-in sample data in place.
 
 ## License
 
