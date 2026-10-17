@@ -1,0 +1,684 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Spark — live app demo</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
+<style>
+:root{
+  --bg:#0c0a0f; --panel:#17131d; --panel2:#1f1a27; --line:#2e2739;
+  --text:#f4f0fa; --mute:#a79fb8; --rose:#f43f5e; --amber:#f59e0b; --good:#34d399;
+}
+*{box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent;}
+html,body{height:100%;}
+body{
+  background:radial-gradient(1200px 600px at 50% -10%, #241a33 0%, var(--bg) 55%);
+  color:var(--text);
+  font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  display:flex; align-items:center; justify-content:center; min-height:100vh; padding:16px;
+}
+.stage{display:flex; flex-direction:column; align-items:center; gap:12px;}
+.phone{
+  width:380px; max-width:96vw; height:780px; max-height:94vh;
+  background:var(--bg); border:1px solid var(--line); border-radius:36px;
+  box-shadow:0 30px 80px rgba(0,0,0,.55), inset 0 0 0 2px #000;
+  display:flex; flex-direction:column; overflow:hidden; position:relative;
+}
+.statusbar{height:34px; display:flex; align-items:center; justify-content:space-between; padding:0 24px; font-size:13px; font-weight:600; flex:0 0 auto;}
+.header{flex:0 0 auto; padding:4px 16px 12px; border-bottom:1px solid var(--line); display:flex; align-items:flex-end; justify-content:space-between;}
+.header h1{font-size:22px; font-weight:800; letter-spacing:.2px; line-height:1;}
+.header .logo{background:linear-gradient(135deg,var(--rose),var(--amber)); -webkit-background-clip:text; background-clip:text; color:transparent;}
+.header .sub{font-size:11px; color:var(--mute); margin-top:3px;}
+.view{flex:1 1 auto; overflow-y:auto; position:relative; padding:14px;}
+.tabbar{flex:0 0 auto; display:flex; border-top:1px solid var(--line); background:var(--panel);}
+.tab{flex:1; padding:9px 0 13px; text-align:center; color:var(--mute); font-size:10px; cursor:pointer; user-select:none;}
+.tab .ico{font-size:20px; display:block; margin-bottom:2px;}
+.tab.on{color:var(--rose);}
+.deckpage{display:flex; flex-direction:column; height:100%;}
+.deck{position:relative; flex:1;}
+.card{
+  position:absolute; inset:0; border-radius:20px; overflow:hidden;
+  border:1px solid var(--line); background:var(--panel2);
+  touch-action:none; user-select:none; cursor:grab;
+}
+.card .photo{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:120px;}
+.card .photo .pimg{position:absolute; inset:0; width:100%; height:100%; object-fit:cover;}
+.card .shade{position:absolute; inset:0; background:linear-gradient(180deg, rgba(0,0,0,.04) 42%, rgba(0,0,0,.88) 100%);}
+.card .meta{position:absolute; left:0; right:0; bottom:0; padding:16px;}
+.card .name{font-size:24px; font-weight:800;}
+.card .name span{font-size:16px; font-weight:600; color:var(--mute);}
+.card .bio{font-size:13px; color:#d9d2e6; margin-top:6px; line-height:1.4;}
+.tags{margin-top:8px; display:flex; flex-wrap:wrap; gap:6px;}
+.tag{font-size:11px; padding:3px 9px; border-radius:999px; background:rgba(255,255,255,.14); color:#fff;}
+.stamp{
+  position:absolute; top:26px; padding:4px 12px; border:3px solid; border-radius:8px;
+  font-size:26px; font-weight:900; letter-spacing:2px; opacity:0; transform:rotate(-14deg); transition:opacity .12s; z-index:5;
+}
+.stamp.like{left:18px; color:var(--good); border-color:var(--good);}
+.stamp.nope{right:18px; color:var(--rose); border-color:var(--rose); transform:rotate(14deg);}
+.stamp.show{opacity:1;}
+.actions{display:flex; justify-content:center; gap:22px; padding:16px 0 4px; flex:0 0 auto;}
+.actbtn{width:56px; height:56px; border-radius:50%; border:1px solid var(--line); background:var(--panel2); color:var(--text); font-size:24px; cursor:pointer; display:flex; align-items:center; justify-content:center;}
+.actbtn.x{color:var(--rose);}
+.actbtn.heart{color:#fff; border-color:var(--rose); background:linear-gradient(135deg,var(--rose),var(--amber)); width:64px; height:64px; font-size:28px;}
+.actbtn.star{color:var(--amber);}
+.overlay{position:absolute; inset:0; background:rgba(10,7,14,.95); z-index:40; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:24px;}
+.overlay .mfaces{display:flex; gap:14px; margin:18px 0;}
+.mface{width:86px; height:86px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:44px; border:3px solid var(--rose); background:var(--panel2); overflow:hidden;}
+.mface img{width:100%; height:100%; object-fit:cover;}
+.overlay h2{font-size:26px; background:linear-gradient(135deg,var(--rose),var(--amber)); -webkit-background-clip:text; background-clip:text; color:transparent;}
+.btn{display:block; width:100%; padding:13px; border-radius:12px; border:0; font-size:15px; font-weight:700; cursor:pointer; text-align:center;}
+.btn.rose{background:linear-gradient(135deg,var(--rose),var(--amber)); color:#fff;}
+.btn.ghost{background:var(--panel2); color:var(--text); border:1px solid var(--line);}
+#toast{position:fixed; left:50%; bottom:26px; transform:translateX(-50%) translateY(20px); background:#2a2333; color:var(--text); border:1px solid var(--line); padding:10px 16px; border-radius:999px; font-size:13px; opacity:0; transition:all .25s; z-index:99; pointer-events:none; max-width:90vw; text-align:center;}
+#toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+.row{display:flex; align-items:center; gap:12px; padding:12px; border-radius:14px; background:var(--panel); border:1px solid var(--line); margin-bottom:10px; cursor:pointer;}
+.avatar{width:52px; height:52px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:26px; flex:0 0 auto; border:2px solid var(--line); position:relative; overflow:hidden;}
+.avatar img{position:absolute; inset:0; width:100%; height:100%; object-fit:cover; border-radius:50%;}
+.row .rn{font-weight:700; font-size:15px;}
+.row .rp{font-size:12px; color:var(--mute); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:210px;}
+.row .rt{margin-left:auto; font-size:11px; color:var(--mute); flex:0 0 auto;}
+.backbtn{background:none; border:0; color:var(--rose); font-size:26px; cursor:pointer; padding:0 6px; line-height:1;}
+.chathead{display:flex; align-items:center; gap:10px; padding-bottom:10px; border-bottom:1px solid var(--line); margin-bottom:10px;}
+.bub{max-width:75%; padding:9px 13px; border-radius:16px; font-size:14px; line-height:1.35; margin-bottom:8px; clear:both;}
+.bub.me{margin-left:auto; background:linear-gradient(135deg,var(--rose),var(--amber)); color:#fff; border-bottom-right-radius:4px;}
+.bub.them{background:var(--panel2); border:1px solid var(--line); border-bottom-left-radius:4px;}
+.composer{position:sticky; bottom:-14px; display:flex; gap:8px; padding:10px 0 4px; background:var(--bg);}
+.composer input{flex:1; padding:11px 13px; border-radius:999px; border:1px solid var(--line); background:var(--panel); color:var(--text); font-size:14px; outline:none;}
+.composer button{width:44px; height:44px; border-radius:50%; border:0; background:linear-gradient(135deg,var(--rose),var(--amber)); color:#fff; font-size:18px; cursor:pointer; flex:0 0 auto;}
+.plancard{background:var(--panel); border:1px solid var(--line); border-radius:18px; padding:18px; margin-bottom:12px; position:relative; overflow:hidden;}
+.plancard.hot{border-color:var(--rose);}
+.planname{font-weight:800; font-size:17px;}
+.planprice{font-size:30px; font-weight:900; margin:8px 0 2px;}
+.planprice span{font-size:13px; color:var(--mute); font-weight:500;}
+.planfeat{font-size:13px; color:var(--mute); line-height:1.7;}
+.badge{position:absolute; top:15px; right:-32px; transform:rotate(38deg); background:var(--rose); color:#fff; font-size:10px; font-weight:800; padding:3px 38px; letter-spacing:1px;}
+.pcard{background:var(--panel); border:1px solid var(--line); border-radius:18px; padding:6px 16px; margin-bottom:12px;}
+.prow{display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px solid var(--line); font-size:14px;}
+.prow:last-child{border-bottom:0;}
+.prow .k{color:var(--mute);}
+.bigava{width:92px; height:92px; border-radius:50%; margin:4px auto 10px; display:flex; align-items:center; justify-content:center; font-size:46px; background:linear-gradient(135deg,var(--rose),var(--amber)); position:relative; overflow:hidden;}
+.bigava img{position:absolute; inset:0; width:100%; height:100%; object-fit:cover; border-radius:50%;}
+.center{text-align:center;}
+.pname{font-size:20px; font-weight:800;}
+.mapwrap{position:relative; height:calc(100% + 28px); margin:-14px; border:0;}
+#map{position:absolute; inset:0; background:#0e0c13;}
+.searchbox{position:absolute; top:12px; left:12px; right:12px; z-index:500; display:flex; gap:8px;}
+.searchbox input{flex:1; padding:10px 13px; border-radius:12px; border:1px solid var(--line); background:rgba(23,19,29,.95); color:var(--text); font-size:13px; outline:none;}
+.gpsbtn{width:42px; height:42px; border-radius:12px; border:1px solid var(--line); background:rgba(23,19,29,.95); color:var(--rose); font-size:18px; cursor:pointer; flex:0 0 auto;}
+.suggest{position:absolute; top:60px; left:12px; right:12px; z-index:500; background:rgba(23,19,29,.98); border:1px solid var(--line); border-radius:12px; overflow:hidden; display:none;}
+.suggest div{padding:10px 13px; font-size:13px; cursor:pointer; border-bottom:1px solid var(--line);}
+.suggest div:last-child{border-bottom:0;}
+.suggest div:hover{background:var(--panel2);}
+.leaflet-container{background:#0e0c13; font-family:inherit;}
+.pinwrap{position:relative; width:38px; height:38px; background:none; border:none;}
+.pinbg{position:absolute; inset:0; border-radius:50% 50% 50% 4px; transform:rotate(-45deg); background:linear-gradient(135deg,var(--rose),var(--amber)); border:2px solid #fff; box-shadow:0 4px 12px rgba(0,0,0,.5); display:flex; align-items:center; justify-content:center;}
+.pinbg span{transform:rotate(45deg); font-size:17px;}
+.pinimg{position:absolute; inset:0; width:34px; height:34px; margin:2px; border-radius:50%; object-fit:cover; border:2px solid #fff; box-shadow:0 4px 12px rgba(0,0,0,.5); background:var(--panel2);}
+.gpswrap{background:none; border:none;}
+.gpsdot{width:16px; height:16px; border-radius:50%; background:#3b82f6; border:3px solid #fff; position:relative; box-shadow:0 0 10px rgba(59,130,246,.8);}
+.gpsdot::after{content:''; position:absolute; inset:-13px; border-radius:50%; border:2px solid rgba(59,130,246,.6); animation:gpulse 1.6s ease-out infinite;}
+@keyframes gpulse{0%{transform:scale(.4); opacity:1;} 100%{transform:scale(1.4); opacity:0;}}
+.sheet{position:absolute; left:12px; right:12px; bottom:12px; z-index:500; background:rgba(23,19,29,.97); border:1px solid var(--line); border-radius:16px; padding:14px; display:none;}
+.sheet .srow{display:flex; align-items:center; gap:12px;}
+.attr{position:absolute; bottom:4px; right:8px; z-index:400; font-size:9px; color:#8b8496;}
+@media (max-width:420px){
+  body{padding:0;}
+  .phone{width:100vw; height:100vh; max-height:none; border-radius:0; border:0;}
+}
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="phone">
+    <div class="statusbar"><span>9:41</span><span>📶 🔋</span></div>
+    <div class="header">
+      <div>
+        <h1 class="logo">spark</h1>
+        <div class="sub">Worldwide demo preview</div>
+      </div>
+      <div class="sub" id="dstat">tap-through demo</div>
+    </div>
+    <div class="view" id="view"></div>
+    <div class="tabbar" id="tabbar"></div>
+  </div>
+</div>
+<div id="toast"></div>
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+function $(id){ return document.getElementById(id); }
+var toastTimer = null;
+function toast(msg){
+  var t = $('toast');
+  t.textContent = msg;
+  t.className = 'show';
+  if (toastTimer){ clearTimeout(toastTimer); }
+  toastTimer = setTimeout(function(){ t.className=''; }, 2400);
+}
+function esc(s){
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function trim(s){ return s.replace(/^\s+|\s+$/g, ''); }
+
+var DECK = [
+  {n:'Maya',   a:26, e:'🌸', ph:'https://randomuser.me/api/portraits/women/79.jpg', grad:['#f43f5e','#fb7185'], bio:'Coffee first, questions later. Dog mom ×2.', tags:['☕ Coffee','📷 Photography','🐕 Dogs']},
+  {n:'Daniel', a:29, e:'🏀', ph:'https://randomuser.me/api/portraits/men/11.jpg',  grad:['#6366f1','#8b5cf6'], bio:'Hoops by day, ramen by night. Your plus-one.', tags:['🏀 Basketball','🍜 Foodie','🎧 Lo-fi']},
+  {n:'Sofia',  a:24, e:'🎨', ph:'https://randomuser.me/api/portraits/women/90.jpg', grad:['#f59e0b','#f97316'], bio:'Art student. I paint, you pose. Deal?', tags:['🎨 Art','🎭 Theatre','🌮 Tacos']},
+  {n:'Jamal',  a:31, e:'🎧', ph:'https://randomuser.me/api/portraits/men/85.jpg',  grad:['#10b981','#34d399'], bio:'DJ. I promise the playlist is worth the swipe.', tags:['🎧 DJ','✈️ Travel','🎮 Gaming']},
+  {n:'Yuki',   a:27, e:'🌙', ph:'https://randomuser.me/api/portraits/women/57.jpg', grad:['#8b5cf6','#d946ef'], bio:'Night owl, plant killer, matcha addict.', tags:['🍵 Matcha','📚 Books','🏙️ Cities']},
+  {n:'Nora',   a:23, e:'⚡', ph:'https://randomuser.me/api/portraits/women/23.jpg', grad:['#0ea5e9','#22d3ee'], bio:'Med student with a fully charged social battery.', tags:['🏃 Running','🎬 Movies','🍷 Wine']},
+  {n:'Leo',    a:28, e:'🦁', ph:'https://randomuser.me/api/portraits/men/34.jpg',  grad:['#ef4444','#f97316'], bio:'Chef. I cook, you bring the wine.', tags:['👨‍🍳 Cooking','🏄 Surf','🍷 Wine']},
+  {n:'Ava',    a:25, e:'🦋', ph:'https://randomuser.me/api/portraits/women/7.jpg',  grad:['#ec4899','#f43f5e'], bio:'Startup life. Swipe right for demo-day tickets.', tags:['🚀 Startups','🧘 Yoga','🐈 Cats']}
+];
+
+var PEEPS = [
+  {n:'Wing',    a:27, c:'Hong Kong',   la:22.3193, ln:114.1694, e:'🐉', ph:'https://randomuser.me/api/portraits/men/32.jpg'},
+  {n:'Haruto',  a:26, c:'Tokyo',       la:35.6762, ln:139.6503, e:'🗼', ph:'https://randomuser.me/api/portraits/men/45.jpg'},
+  {n:'Ji-woo',  a:25, c:'Seoul',       la:37.5665, ln:126.9780, e:'💜', ph:'https://randomuser.me/api/portraits/women/21.jpg'},
+  {n:'Priya',   a:28, c:'Singapore',   la:1.3521,  ln:103.8198, e:'🌴', ph:'https://randomuser.me/api/portraits/women/33.jpg'},
+  {n:'Ethan',   a:30, c:'Singapore',   la:1.2903,  ln:103.8520, e:'🏙️', ph:'https://randomuser.me/api/portraits/men/76.jpg'},
+  {n:'Nattaya', a:24, c:'Bangkok',     la:13.7563, ln:100.5018, e:'🛺', ph:'https://randomuser.me/api/portraits/women/44.jpg'},
+  {n:'Matilda', a:27, c:'Sydney',      la:-33.8688,ln:151.2093, e:'🏄', ph:'https://randomuser.me/api/portraits/women/65.jpg'},
+  {n:'Amelia',  a:26, c:'London',      la:51.5074, ln:-0.1278,  e:'☕', ph:'https://randomuser.me/api/portraits/women/12.jpg'},
+  {n:'Oliver',  a:29, c:'London',      la:51.5145, ln:-0.1269,  e:'🎡', ph:'https://randomuser.me/api/portraits/men/52.jpg'},
+  {n:'Camille', a:29, c:'Paris',       la:48.8566, ln:2.3522,   e:'🥐', ph:'https://randomuser.me/api/portraits/women/26.jpg'},
+  {n:'Lena',    a:31, c:'Berlin',      la:52.5200, ln:13.4050,  e:'🎧', ph:'https://randomuser.me/api/portraits/women/50.jpg'},
+  {n:'Diego',   a:29, c:'Madrid',      la:40.4168, ln:-3.7038,  e:'🥘', ph:'https://randomuser.me/api/portraits/men/22.jpg'},
+  {n:'Jessica', a:27, c:'New York',    la:40.7128, ln:-74.0060, e:'🗽', ph:'https://randomuser.me/api/portraits/women/68.jpg'},
+  {n:'Marcus',  a:32, c:'Los Angeles', la:34.0522, ln:-118.2437,e:'🌴', ph:'https://randomuser.me/api/portraits/men/56.jpg'},
+  {n:'Chloe',   a:25, c:'Toronto',     la:43.6532, ln:-79.3832, e:'🍁', ph:'https://randomuser.me/api/portraits/women/17.jpg'},
+  {n:'Valeria', a:26, c:'Mexico City', la:19.4326, ln:-99.1332, e:'🌮', ph:'https://randomuser.me/api/portraits/women/29.jpg'},
+  {n:'Rafael',  a:28, c:'São Paulo',   la:-23.5505,ln:-46.6333, e:'⚽', ph:'https://randomuser.me/api/portraits/men/41.jpg'},
+  {n:'Wanjiru', a:28, c:'Nairobi',     la:-1.2921, ln:36.8219,  e:'🦁', ph:'https://randomuser.me/api/portraits/women/55.jpg'},
+  {n:'Fatima',  a:29, c:'Dubai',       la:25.2048, ln:55.2708,  e:'🏜️', ph:'https://randomuser.me/api/portraits/women/38.jpg'},
+  {n:'Omar',    a:33, c:'Dubai',       la:25.2434, ln:55.3097,  e:'🌆', ph:'https://randomuser.me/api/portraits/men/36.jpg'},
+  {n:'Ananya',  a:25, c:'Mumbai',      la:19.0760, ln:72.8777,  e:'🎬', ph:'https://randomuser.me/api/portraits/women/47.jpg'},
+  {n:'Arjun',   a:30, c:'Hong Kong',   la:22.2988, ln:114.1722, e:'⛵', ph:'https://randomuser.me/api/portraits/men/64.jpg'},
+  {n:'Mei',     a:24, c:'Taipei',      la:25.0330, ln:121.5654, e:'🧋', ph:'https://randomuser.me/api/portraits/women/19.jpg'},
+  {n:'Lars',    a:31, c:'Stockholm',   la:59.3293, ln:18.0686,  e:'❄️', ph:'https://randomuser.me/api/portraits/men/70.jpg'},
+  {n:'Zara',    a:27, c:'Lagos',       la:6.5244,  ln:3.3792,   e:'🌍', ph:'https://randomuser.me/api/portraits/women/40.jpg'}
+];
+
+var CITIES = [
+  {n:'Hong Kong',   la:22.3193, ln:114.1694},
+  {n:'Tokyo',       la:35.6762, ln:139.6503},
+  {n:'Seoul',       la:37.5665, ln:126.9780},
+  {n:'Singapore',   la:1.3521,  ln:103.8198},
+  {n:'Bangkok',     la:13.7563, ln:100.5018},
+  {n:'Sydney',      la:-33.8688,ln:151.2093},
+  {n:'London',      la:51.5074, ln:-0.1278},
+  {n:'Paris',       la:48.8566, ln:2.3522},
+  {n:'Berlin',      la:52.5200, ln:13.4050},
+  {n:'Madrid',      la:40.4168, ln:-3.7038},
+  {n:'New York',    la:40.7128, ln:-74.0060},
+  {n:'Los Angeles', la:34.0522, ln:-118.2437},
+  {n:'Toronto',     la:43.6532, ln:-79.3832},
+  {n:'Mexico City', la:19.4326, ln:-99.1332},
+  {n:'São Paulo',   la:-23.5505,ln:-46.6333},
+  {n:'Nairobi',     la:-1.2921, ln:36.8219},
+  {n:'Dubai',       la:25.2048, ln:55.2708},
+  {n:'Mumbai',      la:19.0760, ln:72.8777},
+  {n:'Taipei',      la:25.0330, ln:121.5654},
+  {n:'Stockholm',   la:59.3293, ln:18.0686},
+  {n:'Lagos',       la:6.5244,  ln:3.3792},
+  {n:'Cairo',       la:30.0444, ln:31.2357}
+];
+
+var MATCHES = [
+  {n:'Maya',  e:'🌸', ph:'https://randomuser.me/api/portraits/women/79.jpg', last:'haha okay that works 😄', t:'2m', grad:['#f43f5e','#fb7185']},
+  {n:'Jamal', e:'🎧', ph:'https://randomuser.me/api/portraits/men/85.jpg',  last:'sent you a track',       t:'1h', grad:['#10b981','#34d399']},
+  {n:'Sofia', e:'🎨', ph:'https://randomuser.me/api/portraits/women/90.jpg', last:'Sunday? 🎭',             t:'3h', grad:['#f59e0b','#f97316']},
+  {n:'Leo',   e:'🦁', ph:'https://randomuser.me/api/portraits/men/34.jpg',  last:'the risotto recipe',     t:'1d', grad:['#ef4444','#f97316']}
+];
+
+var REPLIES = [
+  'Haha okay that works 😄',
+  'Tell me more!',
+  'Wait, really? 😮',
+  'Let\'s definitely do that',
+  'Okay but coffee first ☕',
+  'You seem fun. This weekend?'
+];
+
+var TABS = [
+  {id:'discover', ico:'⚡',  label:'Discover'},
+  {id:'map',      ico:'🗺️', label:'Map'},
+  {id:'matches',  ico:'💬', label:'Matches'},
+  {id:'plus',     ico:'★',  label:'Spark+'},
+  {id:'profile',  ico:'☺',  label:'Profile'}
+];
+var cur = 'discover';
+var mapObj = null;
+var gpsMk = null;
+var nomTimer = null;
+var deckIdx = 0;
+var chatWith = null;
+var chatLog = {};
+var pvOn = true;
+
+var DEMO_ID = null;
+try { DEMO_ID = localStorage.getItem('spark_demo_id'); } catch (e){}
+if (!DEMO_ID){
+  DEMO_ID = 'demo-' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+  try { localStorage.setItem('spark_demo_id', DEMO_ID); } catch (e){}
+}
+var SERVER_CHATS = {};
+function ping(kind, payload){
+  try {
+    fetch('https://zvcxbrdhikeizyaumtsg.supabase.co/functions/v1/demo-data', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ demo_id: DEMO_ID, kind: kind, payload: payload || {} })
+    }).catch(function(){});
+  } catch (e){}
+}
+
+function renderTabs(){
+  var h = '';
+  for (var i=0;i<TABS.length;i++){
+    var tb = TABS[i];
+    h += '<div class="tab' + (tb.id===cur?' on':'') + '" id="tab-' + tb.id + '"><span class="ico">' + tb.ico + '</span>' + tb.label + '</div>';
+  }
+  $('tabbar').innerHTML = h;
+  for (var j=0;j<TABS.length;j++){ bindTab(TABS[j].id); }
+}
+function bindTab(id){
+  $('tab-' + id).addEventListener('click', function(){ go(id); });
+}
+function go(id){
+  cur = id;
+  renderTabs();
+  renderView();
+}
+function renderView(){
+  var v = $('view');
+  if (cur === 'discover'){ v.innerHTML = deckHTML(); drawDeck(); bindActions(); }
+  else if (cur === 'map'){ v.innerHTML = mapHTML(); initMap(); }
+  else if (cur === 'matches'){ v.innerHTML = matchesHTML(); bindMatches(); }
+  else if (cur === 'plus'){ v.innerHTML = payHTML(); bindPay(); }
+  else if (cur === 'profile'){ v.innerHTML = profHTML(); bindProf(); }
+}
+
+function deckHTML(){
+  return '<div class="deckpage"><div class="deck" id="deck"></div>'
+    + '<div class="actions">'
+    + '<button class="actbtn x" id="btnNope">✕</button>'
+    + '<button class="actbtn star" id="btnBoost">⚡</button>'
+    + '<button class="actbtn heart" id="btnLike">♥</button>'
+    + '</div></div>';
+}
+function drawDeck(){
+  var d = $('deck');
+  if (!d) return;
+  if (deckIdx >= DECK.length){
+    d.innerHTML = '<div style="text-align:center;padding:60px 20px;color:var(--mute);">'
+      + '<div style="font-size:56px;">🌍</div>'
+      + '<div style="font-size:18px;font-weight:800;color:var(--text);margin-top:12px;">You\'re all caught up</div>'
+      + '<div style="font-size:13px;margin-top:8px;line-height:1.6;">New people join every minute.<br>Try the Map to find them worldwide.</div>'
+      + '<button class="btn rose" id="btnReset" style="margin-top:20px;">Restart demo deck</button></div>';
+    $('btnReset').addEventListener('click', function(){ deckIdx = 0; drawDeck(); });
+    return;
+  }
+  var cards = '';
+  for (var i = deckIdx; i < Math.min(deckIdx + 3, DECK.length); i++){
+    cards += cardHTML(DECK[i], i - deckIdx);
+  }
+  d.innerHTML = cards;
+  makeDraggable(d.firstChild);
+}
+function cardHTML(p, off){
+  var h = '';
+  h += '<div class="card" data-name="' + p.n + '" style="z-index:' + (10 - off) + ';transform:translateY(' + (off * 10) + 'px) scale(' + (1 - off * 0.04) + ');' + (off ? 'opacity:.92;' : '') + '">';
+  h += '<div class="photo" style="background:linear-gradient(160deg,' + p.grad[0] + ',' + p.grad[1] + ');">' + p.e + '<img class="pimg" src="' + p.ph + '" alt="" onerror="this.style.display=\'none\'"></div>';
+  h += '<div class="shade"></div>';
+  h += '<div class="stamp like">LIKE</div><div class="stamp nope">NOPE</div>';
+  h += '<div class="meta"><div class="name">' + p.n + ' <span>' + p.a + '</span></div>';
+  h += '<div class="bio">' + esc(p.bio) + '</div><div class="tags">';
+  for (var i = 0; i < p.tags.length; i++){ h += '<span class="tag">' + p.tags[i] + '</span>'; }
+  h += '</div></div></div>';
+  return h;
+}
+function makeDraggable(el){
+  if (!el) return;
+  var startX = 0, startY = 0, dx = 0, dy = 0, dragging = false;
+  var likeEl = el.querySelector('.stamp.like');
+  var nopeEl = el.querySelector('.stamp.nope');
+  function onStart(e){
+    dragging = true;
+    var pt = e.touches ? e.touches[0] : e;
+    startX = pt.clientX; startY = pt.clientY;
+    el.style.transition = 'none';
+  }
+  function onMove(e){
+    if (!dragging) return;
+    var pt = e.touches ? e.touches[0] : e;
+    dx = pt.clientX - startX; dy = pt.clientY - startY;
+    el.style.transform = 'translate(' + dx + 'px,' + (dy * 0.6) + 'px) rotate(' + (dx * 0.06) + 'deg)';
+    likeEl.className = 'stamp like' + (dx > 30 ? ' show' : '');
+    nopeEl.className = 'stamp nope' + (dx < -30 ? ' show' : '');
+    if (e.cancelable && e.preventDefault){ e.preventDefault(); }
+  }
+  function onEnd(){
+    if (!dragging) return;
+    dragging = false;
+    if (dx > 90){ fly(el, 1); }
+    else if (dx < -90){ fly(el, -1); }
+    else {
+      el.style.transition = 'transform .25s ease';
+      el.style.transform = '';
+      likeEl.className = 'stamp like';
+      nopeEl.className = 'stamp nope';
+    }
+    dx = 0; dy = 0;
+  }
+  el.addEventListener('mousedown', onStart);
+  el.addEventListener('touchstart', onStart, {passive:true});
+  document.addEventListener('mousemove', onMove);
+  el.addEventListener('touchmove', onMove, {passive:false});
+  document.addEventListener('mouseup', onEnd);
+  el.addEventListener('touchend', onEnd);
+}
+function fly(el, dir){
+  var name = el.getAttribute('data-name');
+  el.style.transition = 'transform .35s ease, opacity .35s ease';
+  el.style.transform = 'translate(' + (dir * 520) + 'px, 40px) rotate(' + (dir * 18) + 'deg)';
+  el.style.opacity = '0';
+  setTimeout(function(){
+    if (!$('deck')) return;
+    deckIdx++;
+    drawDeck();
+    if (dir > 0){
+      ping('like', { name: name });
+      if (deckIdx % 2 === 0){ showMatch(name); }
+      else { toast('You liked ' + name + ' 💗'); }
+    } else {
+      ping('pass', { name: name });
+      toast('Passed on ' + name);
+    }
+  }, 300);
+}
+function showMatch(name){
+  var pe = DECK[deckIdx - 1];
+  var face = pe ? pe.e : '🌸';
+  var img = pe ? '<img src="' + pe.ph + '" alt="" onerror="this.style.display=\'none\'">' : '';
+  var ov = document.createElement('div');
+  ov.className = 'overlay';
+  ov.innerHTML = '<div style="font-size:44px;">🎉</div>'
+    + '<h2>It\'s a Match!</h2>'
+    + '<div style="color:var(--mute);font-size:13px;margin-top:8px;">You and ' + esc(name) + ' liked each other.</div>'
+    + '<div class="mfaces"><div class="mface">🙂</div><div class="mface">' + face + img + '</div></div>'
+    + '<button class="btn rose" id="mChat" style="margin-bottom:10px;">Send a message</button>'
+    + '<button class="btn ghost" id="mKeep">Keep swiping</button>';
+  $('view').appendChild(ov);
+  $('mChat').addEventListener('click', function(){ ov.remove(); go('matches'); });
+  $('mKeep').addEventListener('click', function(){ ov.remove(); });
+}
+function bindActions(){
+  var bl = $('btnLike'), bn = $('btnNope'), bb = $('btnBoost');
+  if (bl) bl.addEventListener('click', function(){ var t = $('deck').firstChild; if (t) fly(t, 1); });
+  if (bn) bn.addEventListener('click', function(){ var t = $('deck').firstChild; if (t) fly(t, -1); });
+  if (bb) bb.addEventListener('click', function(){ toast('Boost sent — trending locally for 30 min ⚡'); });
+}
+
+function matchesHTML(){
+  var h = '<div style="font-size:12px;color:var(--mute);margin-bottom:10px;">💬 Demo conversations — tap to chat</div>';
+  for (var i = 0; i < MATCHES.length; i++){
+    var m = MATCHES[i];
+    h += '<div class="row" id="row-' + i + '">';
+    h += '<div class="avatar" style="background:linear-gradient(135deg,' + m.grad[0] + ',' + m.grad[1] + ');">' + m.e + '<img src="' + m.ph + '" alt="" onerror="this.style.display=\'none\'"></div>';
+    h += '<div style="min-width:0;"><div class="rn">' + m.n + '</div><div class="rp">' + esc(m.last) + '</div></div>';
+    h += '<div class="rt">' + m.t + '</div></div>';
+  }
+  return h;
+}
+function bindMatches(){
+  for (var i = 0; i < MATCHES.length; i++){
+    (function(idx){
+      $('row-' + idx).addEventListener('click', function(){ openChat(idx); });
+    })(i);
+  }
+}
+function openChat(i){
+  var m = MATCHES[i];
+  chatWith = i;
+  var v = $('view');
+  var h = '<div class="chathead"><button class="backbtn" id="chatBack">‹</button>';
+  h += '<div class="avatar" style="width:38px;height:38px;font-size:19px;background:linear-gradient(135deg,' + m.grad[0] + ',' + m.grad[1] + ');">' + m.e + '<img src="' + m.ph + '" alt="" onerror="this.style.display=\'none\'"></div>';
+  h += '<div><div class="rn">' + m.n + '</div><div style="font-size:11px;color:var(--good);">● online now</div></div></div>';
+  h += '<div id="msgs"></div>';
+  h += '<div class="composer"><input id="chatIn" placeholder="Message ' + m.n + '…" autocomplete="off"><button id="chatSend">➤</button></div>';
+  v.innerHTML = h;
+  if (!chatLog[i]){
+    var srv = SERVER_CHATS[m.n];
+    chatLog[i] = (srv && srv.length) ? srv.slice() : [
+      {w:'them', t:'Hey! Glad we matched 😊'},
+      {w:'me',   t:'Same! How\'s your week going?'}
+    ];
+  }
+  paintMsgs();
+  $('chatBack').addEventListener('click', function(){ chatWith = null; v.innerHTML = matchesHTML(); bindMatches(); });
+  $('chatSend').addEventListener('click', sendMsg);
+  $('chatIn').addEventListener('keydown', function(e){ if (e.key === 'Enter'){ sendMsg(); } });
+}
+function paintMsgs(){
+  var box = $('msgs');
+  if (!box) return;
+  var log = chatLog[chatWith] || [];
+  var h = '';
+  for (var i = 0; i < log.length; i++){ h += '<div class="bub ' + log[i].w + '">' + esc(log[i].t) + '</div>'; }
+  box.innerHTML = h;
+  box.scrollIntoView(false);
+}
+function sendMsg(){
+  var inp = $('chatIn');
+  if (!inp || chatWith === null) return;
+  var t = trim(inp.value);
+  if (!t) return;
+  chatLog[chatWith].push({w:'me', t:t});
+  var peer = MATCHES[chatWith];
+  if (peer){ ping('chat', { peer: peer.n, w: 'me', t: t }); }
+  inp.value = '';
+  paintMsgs();
+  setTimeout(function(){
+    if (chatWith === null) return;
+    var r = REPLIES[Math.floor(Math.random() * REPLIES.length)];
+    chatLog[chatWith].push({w:'them', t:r});
+    paintMsgs();
+  }, 900);
+}
+
+function payHTML(){
+  var h = '<div style="text-align:center;margin:6px 0 14px;">';
+  h += '<div style="font-size:34px;">★</div>';
+  h += '<div style="font-size:19px;font-weight:800;">Spark+</div>';
+  h += '<div style="font-size:12px;color:var(--mute);margin-top:4px;">Demo paywall — pricing from the business plan</div></div>';
+  h += '<div class="plancard hot"><div class="badge">POPULAR</div>';
+  h += '<div class="planname">Spark+ Monthly</div>';
+  h += '<div class="planprice">US$19.99<span>/mo</span></div>';
+  h += '<div class="planfeat">Unlimited likes · See who liked you · 5 Super Likes/day · 1 Boost/mo · Travel mode · Read receipts</div>';
+  h += '<button class="btn rose" id="p1" style="margin-top:12px;">Subscribe (demo)</button></div>';
+  h += '<div class="plancard"><div class="planname">Boost Pack</div>';
+  h += '<div class="planprice">US$4.99<span> one-off</span></div>';
+  h += '<div class="planfeat">Trend at the top of nearby profiles for 30 minutes</div>';
+  h += '<button class="btn ghost" id="p2" style="margin-top:12px;">Get Boost (demo)</button></div>';
+  h += '<div class="plancard"><div class="planname">Super Like ×5</div>';
+  h += '<div class="planprice">US$6.99<span> one-off</span></div>';
+  h += '<div class="planfeat">Skip the queue — tell them you really mean it</div>';
+  h += '<button class="btn ghost" id="p3" style="margin-top:12px;">Get Super Likes (demo)</button></div>';
+  h += '<div style="font-size:11px;color:var(--mute);text-align:center;margin-top:6px;line-height:1.6;">Demo only — no real payment is processed.<br>Live checkout arrives with the Stripe keys (runbook step 5).</div>';
+  return h;
+}
+function bindPay(){
+  $('p1').addEventListener('click', function(){ toast('Demo: Spark+ checkout would open here 💳'); });
+  $('p2').addEventListener('click', function(){ toast('Demo: Boost active — trending for 30 min ⚡'); });
+  $('p3').addEventListener('click', function(){ toast('Demo: +5 Super Likes added 💗'); });
+}
+
+function profHTML(){
+  var h = '<div class="center"><div class="bigava">🙂</div>';
+  h += '<div class="pname">Demo User</div>';
+  h += '<div style="font-size:12px;color:var(--mute);margin-top:3px;">Hong Kong · Free plan</div></div>';
+  h += '<div class="pcard" style="margin-top:14px;">';
+  h += '<div class="prow"><span class="k">Profile strength</span><span style="color:var(--good);font-weight:700;">85%</span></div>';
+  h += '<div class="prow"><span class="k">Likes received</span><span>128</span></div>';
+  h += '<div class="prow"><span class="k">Matches</span><span>24</span></div>';
+  h += '<div class="prow" id="pvRow" style="cursor:pointer;"><span class="k">Show me on Spark</span><span id="pv" style="font-weight:700;color:var(--good);">' + (pvOn ? 'On' : 'Off') + '</span></div></div>';
+  h += '<div class="pcard">';
+  h += '<div class="prow"><span class="k">Edit profile</span><span style="color:var(--mute);">›</span></div>';
+  h += '<div class="prow"><span class="k">Settings</span><span style="color:var(--mute);">›</span></div>';
+  h += '<div class="prow"><span class="k">Privacy &amp; safety</span><span style="color:var(--mute);">›</span></div></div>';
+  h += '<button class="btn ghost" id="pOut">Log out (demo)</button>';
+  h += '<div style="font-size:11px;color:var(--mute);text-align:center;margin-top:14px;">Spark demo build · worldwide preview</div>';
+  return h;
+}
+function bindProf(){
+  $('pOut').addEventListener('click', function(){ toast('This is a demo — you\'re already "logged in" 🙂'); });
+  $('pvRow').addEventListener('click', function(){
+    pvOn = !pvOn;
+    $('pv').textContent = pvOn ? 'On' : 'Off';
+    $('pv').style.color = pvOn ? 'var(--good)' : 'var(--mute)';
+    toast(pvOn ? 'You\'re visible again 👀' : 'Paused — hidden from the deck');
+  });
+}
+
+function mapHTML(){
+  var h = '<div class="mapwrap">';
+  h += '<div id="map"></div>';
+  h += '<div class="searchbox"><input id="mIn" placeholder="Search any city on Earth…" autocomplete="off"><button class="gpsbtn" id="mGps">◎</button></div>';
+  h += '<div class="suggest" id="mSug"></div>';
+  h += '<div class="sheet" id="mSheet"></div>';
+  h += '<div class="attr">© OpenStreetMap · © CARTO</div>';
+  h += '</div>';
+  return h;
+}
+function initMap(){
+  if (typeof L === 'undefined'){
+    $('map').innerHTML = '<div style="padding:70px 24px;text-align:center;color:var(--mute);font-size:13px;line-height:1.7;">Map engine failed to load (offline?).<br>Swipe and other tabs still work.<br>Try again on a connection.</div>';
+    return;
+  }
+  mapObj = L.map('map', {zoomControl:true, attributionControl:false, worldCopyJump:true, zoomSnap:0.25}).setView([22.3193, 114.1694], 12);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {maxZoom:19}).addTo(mapObj);
+  for (var i = 0; i < PEEPS.length; i++){ addPin(PEEPS[i]); }
+  bindMapSearch();
+  setTimeout(function(){ if (mapObj){ mapObj.invalidateSize(); } }, 200);
+}
+function addPin(p){
+  var html = '<div class="pinbg"><span>' + p.e + '</span></div><img class="pinimg" src="' + p.ph + '" alt="" onerror="this.style.display=\'none\'">';
+  var ic = L.divIcon({className:'pinwrap', html:html, iconSize:[38,38], iconAnchor:[19,36]});
+  var mk = L.marker([p.la, p.ln], {icon:ic}).addTo(mapObj);
+  mk.on('click', function(){ showSheet(p); });
+}
+function showSheet(p){
+  var sh = $('mSheet');
+  if (!sh) return;
+  sh.style.display = 'block';
+  sh.innerHTML = '<div class="srow"><div class="avatar" style="background:linear-gradient(135deg,var(--rose),var(--amber));">' + p.e + '<img src="' + p.ph + '" alt="" onerror="this.style.display=\'none\'"></div>'
+    + '<div style="flex:1;min-width:0;"><div class="rn">' + p.n + ', ' + p.a + '</div>'
+    + '<div style="font-size:12px;color:var(--mute);">📍 ' + p.c + ' · near you (demo)</div></div>'
+    + '<button class="btn rose" id="shLike" style="width:auto;padding:9px 16px;">♥</button></div>';
+  $('shLike').addEventListener('click', function(){
+    sh.style.display = 'none';
+    ping('like', { name: p.n, from: 'map' });
+    toast('You liked ' + p.n + ' from the map 💗');
+  });
+}
+function shortLabel(d){
+  var parts = d.split(',');
+  var out = trim(parts.slice(0, 2).join(','));
+  return out.length > 44 ? out.substring(0, 44) + '…' : out;
+}
+function renderSugg(items){
+  var sug = $('mSug'), inp = $('mIn');
+  var h = '';
+  for (var i = 0; i < items.length; i++){
+    h += '<div class="sugItem" data-la="' + items[i].la + '" data-ln="' + items[i].ln + '">' + esc(items[i].label) + '</div>';
+  }
+  sug.innerHTML = h;
+  sug.style.display = 'block';
+  var els = sug.getElementsByClassName('sugItem');
+  for (var k = 0; k < els.length; k++){
+    (function(el){
+      el.addEventListener('click', function(){
+        mapObj.flyTo([parseFloat(el.getAttribute('data-la')), parseFloat(el.getAttribute('data-ln'))], 12, {duration:1.2});
+        sug.style.display = 'none';
+        inp.value = el.textContent;
+        inp.blur();
+      });
+    })(els[k]);
+  }
+}
+function nominatim(q){
+  fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&limit=4&q=' + encodeURIComponent(q))
+    .then(function(r){ return r.json(); })
+    .then(function(rows){
+      if (!rows || !rows.length) return;
+      var items = [];
+      for (var i = 0; i < rows.length; i++){ items.push({label:shortLabel(rows[i].display_name), la:rows[i].lat, ln:rows[i].lon}); }
+      renderSugg(items);
+    })
+    .catch(function(){});
+}
+function bindMapSearch(){
+  var inp = $('mIn'), sug = $('mSug');
+  if (!inp) return;
+  inp.addEventListener('input', function(){
+    var q = trim(inp.value);
+    clearTimeout(nomTimer);
+    if (q.length < 2){ sug.style.display = 'none'; return; }
+    var local = [];
+    var ql = q.toLowerCase();
+    for (var i = 0; i < CITIES.length; i++){
+      if (CITIES[i].n.toLowerCase().indexOf(ql) !== -1){ local.push({label:CITIES[i].n, la:CITIES[i].la, ln:CITIES[i].ln}); }
+      if (local.length >= 4) break;
+    }
+    if (local.length){ renderSugg(local); }
+    nomTimer = setTimeout(function(){ nominatim(q); }, 450);
+  });
+  $('mGps').addEventListener('click', function(){
+    var btn = $('mGps');
+    function done(lat, lng, label){
+      if (mapObj){
+        mapObj.flyTo([lat, lng], 13, {duration:1.2});
+        if (gpsMk){ mapObj.removeLayer(gpsMk); }
+        var g = L.divIcon({className:'gpswrap', html:'<div class="gpsdot"></div>', iconSize:[16,16], iconAnchor:[8,8]});
+        gpsMk = L.marker([lat, lng], {icon:g, zIndexOffset:1000}).addTo(mapObj);
+      }
+      toast(label);
+    }
+    if (navigator.geolocation){
+      btn.textContent = '…';
+      navigator.geolocation.getCurrentPosition(function(pos){
+        btn.textContent = '◎';
+        done(pos.coords.latitude, pos.coords.longitude, 'Jumped to your GPS location 📍');
+      }, function(){
+        btn.textContent = '◎';
+        done(22.3193, 114.1694, 'GPS blocked — showing Hong Kong (demo HQ) 🏙️');
+      }, {timeout:5000});
+    } else {
+      done(22.3193, 114.1694, 'Geolocation unavailable — showing Hong Kong 🏙️');
+    }
+  });
+}
+
+renderTabs();
+renderView();
+fetch('https://zvcxbrdhikeizyaumtsg.supabase.co/functions/v1/demo-data?demo_id=' + encodeURIComponent(DEMO_ID))
+  .then(function(r){ return r.json(); })
+  .then(function(d){
+    if (!d) return;
+    var changed = false;
+    if (d.deck && d.deck.length){ DECK = d.deck; deckIdx = 0; changed = true; }
+    if (d.peeps && d.peeps.length){ PEEPS = d.peeps; changed = true; }
+    if (d.chats){ SERVER_CHATS = d.chats; }
+    var st = $('dstat');
+    if (st){
+      st.textContent = '● live data';
+      st.style.color = 'var(--good)';
+    }
+    if (changed){ renderView(); }
+  })
+  .catch(function(){});
+</script>
+</body>
+</html>
