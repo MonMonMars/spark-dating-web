@@ -2,11 +2,11 @@
 
 Public tap-through demo of Spark. The page is a phone frame with Discover, Map, Matches, Spark+, and Profile. Sample people are built into the page, so the demo still runs when the network call fails. When the call succeeds, the deck and map use live demo data.
 
-## Live site
+## Site
 
 https://monmonmars.github.io/spark-dating-web/
 
-GitHub Pages serves this repository as a static site. `index.html` is the site root.
+`index.html` is the site root. That address serves this demo once GitHub Pages is enabled for the repository (branch `main`, folder `/`, or the Actions workflow in `.github/workflows/pages.yml`).
 
 ## API
 
